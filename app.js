@@ -32,10 +32,10 @@ function render(){
     $("spinBtn").textContent = "終了！Resetして再開";
     $("spinBtn").disabled = true;
   } else if (autoRunning) {
-    $("spinBtn").textContent = "止める";
+    $("spinBtn").textContent = "Stop";
     $("spinBtn").disabled = false;
   } else {
-    $("spinBtn").textContent = "自動で回す！";
+    $("spinBtn").textContent = "Start";
     $("spinBtn").disabled = false;
   }
 }
