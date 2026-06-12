@@ -133,15 +133,25 @@ function spinOnce(){
     setTimeout(()=>{
       state.items[winner].count+=1;
       const picked=state.items[winner];
-      state.history.unshift(picked.name); state.history=state.history.slice(0,7);
+
       $("resultText").textContent=`${picked.name}！`;
       if(navigator.vibrate) navigator.vibrate(25);
+
       if(picked.count>=state.goal){
         finished=true;
+        state.history.unshift(picked.name);
+        state.history=state.history.slice(0,7);
+
         $("resultText").textContent=`GOAL! ${picked.name} が ${state.goal} 回達成`;
-        $("spinBtn").textContent="終了！Resetして再開"; $("spinBtn").disabled=true;
+        $("spinBtn").textContent="終了！Resetして再開"; 
+        $("spinBtn").disabled=true;
       }
-      spinning=false; save(); renderItems(); renderHistory(); resolve();
+
+      spinning=false; 
+      save(); 
+      renderItems(); 
+      renderHistory(); 
+      resolve();
     },1080);
   });
 }
