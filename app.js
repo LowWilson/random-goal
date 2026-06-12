@@ -27,16 +27,18 @@ function render(){
   $("goalValue").textContent = state.goal;
   renderWheel(); renderItems(); renderHistory(); renderOrderItems(); renderOrderResults();
   $("memoText").value = state.memo || "";
+
   if (finished) {
     $("spinBtn").textContent = "終了！Resetして再開";
     $("spinBtn").disabled = true;
   } else if (autoRunning) {
-  $("spinBtn").textContent = "止める";
-  $("spinBtn").disabled = false;
+    $("spinBtn").textContent = "止める";
+    $("spinBtn").disabled = false;
   } else {
-  $("spinBtn").textContent = "自動で回す！";
-  $("spinBtn").disabled = false;
+    $("spinBtn").textContent = "自動で回す！";
+    $("spinBtn").disabled = false;
   }
+}
 
 function renderWheel(){
   const wheel = $("wheel");
