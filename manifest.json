@@ -1,0 +1,15 @@
+{
+  "name": "Random Goal",
+  "short_name": "Random Goal",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#05030a",
+  "theme_color": "#05030a",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
