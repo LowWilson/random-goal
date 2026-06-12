@@ -19,6 +19,7 @@ if (!state.memo) state.memo = "";
 let spinning = false;
 let autoRunning = false;
 let finished = state.items.some(x => x.count >= state.goal);
+let stopRequested = false;
 
 function save(){ localStorage.setItem("randomGoalState", JSON.stringify(state)); }
 
@@ -29,11 +30,13 @@ function render(){
   if (finished) {
     $("spinBtn").textContent = "終了！Resetして再開";
     $("spinBtn").disabled = true;
-  } else if (!autoRunning) {
-    $("spinBtn").textContent = "自動で回す！";
-    $("spinBtn").disabled = false;
+  } else if (autoRunning) {
+  $("spinBtn").textContent = "止める";
+  $("spinBtn").disabled = false;
+  } else {
+  $("spinBtn").textContent = "自動で回す！";
+  $("spinBtn").disabled = false;
   }
-}
 
 function renderWheel(){
   const wheel = $("wheel");
@@ -113,11 +116,35 @@ function renderOrderResults(){
 function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 
 async function autoSpin(){
-  if(autoRunning || finished) return;
+  if(finished) return;
+
+  if(autoRunning){
+    stopRequested = true;
+    $("spinBtn").textContent = "停止中...";
+    return;
+  }
+
   if(state.items.length<2) return alert("項目を2つ以上入れてね。ルーレットが虚無になる。");
-  autoRunning=true; $("spinBtn").disabled=true; $("spinBtn").textContent="Auto spinning...";
-  while(!finished){ await spinOnce(); if(!finished) await sleep(180); }
-  autoRunning=false;
+
+  autoRunning = true;
+  stopRequested = false;
+  $("spinBtn").disabled = false;
+  $("spinBtn").textContent = "止める";
+
+  while(!finished && !stopRequested){
+    await spinOnce();
+    if(!finished && !stopRequested) await sleep(180);
+  }
+
+  autoRunning = false;
+
+  if(!finished){
+    $("spinBtn").textContent = "自動で回す！";
+    $("spinBtn").disabled = false;
+    $("resultText").textContent = "Stopped";
+  }
+
+  stopRequested = false;
 }
 
 function spinOnce(){
