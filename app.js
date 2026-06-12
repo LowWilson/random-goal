@@ -141,7 +141,7 @@ async function autoSpin(){
   autoRunning = false;
 
   if(!finished){
-    $("spinBtn").textContent = "自動で回す！";
+    $("spinBtn").textContent = "Start";
     $("spinBtn").disabled = false;
     $("resultText").textContent = "Stopped";
   }
@@ -171,7 +171,7 @@ function spinOnce(){
         state.history.unshift(picked.name);
         state.history=state.history.slice(0,7);
 
-        $("resultText").textContent=`GOAL! ${picked.name} が ${state.goal} 回達成`;
+        $("resultText").textContent=`${picked.name}`;
         $("spinBtn").textContent="終了！Resetして再開"; 
         $("spinBtn").disabled=true;
       }
