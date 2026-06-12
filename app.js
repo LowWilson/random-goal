@@ -134,7 +134,7 @@ function spinOnce(){
       state.items[winner].count+=1;
       const picked=state.items[winner];
       state.history.unshift(picked.name); state.history=state.history.slice(0,7);
-      $("resultText").textContent=`✨ ${picked.name}！`;
+      $("resultText").textContent=`${picked.name}！`;
       if(navigator.vibrate) navigator.vibrate(25);
       if(picked.count>=state.goal){
         finished=true;
