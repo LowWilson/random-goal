@@ -30,7 +30,7 @@ function render(){
     $("spinBtn").textContent = "終了！Resetして再開";
     $("spinBtn").disabled = true;
   } else if (!autoRunning) {
-    $("spinBtn").textContent = "🚀 自動で回す！";
+    $("spinBtn").textContent = "自動で回す！";
     $("spinBtn").disabled = false;
   }
 }
@@ -138,7 +138,7 @@ function spinOnce(){
       if(navigator.vibrate) navigator.vibrate(25);
       if(picked.count>=state.goal){
         finished=true;
-        $("resultText").textContent=`🎉 GOAL! ${picked.name} が ${state.goal} 回達成`;
+        $("resultText").textContent=`GOAL! ${picked.name} が ${state.goal} 回達成`;
         $("spinBtn").textContent="終了！Resetして再開"; $("spinBtn").disabled=true;
       }
       spinning=false; save(); renderItems(); renderHistory(); resolve();
