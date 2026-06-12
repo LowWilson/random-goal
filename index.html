@@ -23,9 +23,9 @@
     </header>
 
     <section class="tabs">
-      <button id="rouletteTab" class="tab active">🎯 Goal</button>
-      <button id="orderTab" class="tab">🔀 Order</button>
-      <button id="memoTab" class="tab">📝 Memo</button>
+      <button id="rouletteTab" class="tab active">Goal</button>
+      <button id="orderTab" class="tab">Order</button>
+      <button id="memoTab" class="tab">Memo</button>
     </section>
 
     <section id="rouletteMode" class="panel active-panel">
@@ -39,7 +39,7 @@
       </div>
 
       <div class="input-row">
-        <input id="itemInput" placeholder="ルーレット項目 例：研究" maxlength="18" />
+        <input id="itemInput" placeholder="ルーレット項目 例：A" maxlength="18" />
         <button id="addItemBtn">追加</button>
       </div>
 
@@ -48,7 +48,7 @@
         <div id="wheel" class="wheel"><div class="wheel-center">★</div></div>
       </div>
 
-      <button id="spinBtn" class="primary">🚀 自動で回す！</button>
+      <button id="spinBtn" class="primary">自動で回す！</button>
       <p id="resultText" class="result">Ready</p>
 
       <div id="itemsList" class="list"></div>
@@ -62,10 +62,10 @@
     <section id="orderMode" class="panel">
       <p class="hint">Order専用の項目。ルーレットとは別管理。</p>
       <div class="input-row">
-        <input id="orderInput" placeholder="順番項目 例：TOEIC" maxlength="18" />
+        <input id="orderInput" placeholder="順番項目 例：A" maxlength="18" />
         <button id="addOrderBtn">追加</button>
       </div>
-      <button id="shuffleBtn" class="primary">🔀 順番を決める</button>
+      <button id="shuffleBtn" class="primary">ランダムに順番を決める</button>
       <div class="section-title"><span>項目</span></div>
       <div id="orderItemsList" class="list"></div>
       <div class="section-title"><span>結果</span><button id="clearOrderResultsBtn" class="ghost tiny">Clear</button></div>
@@ -74,7 +74,7 @@
 
     <section id="memoMode" class="panel">
       <p class="hint">ちょっとしたメモ用。自動保存。</p>
-      <textarea id="memoText" placeholder="例：今日は研究30分、TOEIC単語100個…"></textarea>
+      <textarea id="memoText" placeholder="MEMO"></textarea>
       <p id="memoStatus" class="memo-status">Saved</p>
     </section>
   </main>
