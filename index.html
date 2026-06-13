@@ -1,112 +1,83 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Prop Payout Tracker</title>
-  <link rel="manifest" href="manifest.json" />
-  <link rel="stylesheet" href="style.css" />
-  <meta name="theme-color" content="#05070d" />
+  <meta name="theme-color" content="#05030a" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-title" content="Payout" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Random Goal" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon.svg" />
+  <link rel="stylesheet" href="style.css" />
+  <title>Random Goal</title>
 </head>
 <body>
   <main class="app">
-    <section class="hero">
+    <header class="hero">
       <div>
-        <p class="eyebrow">SECURE CLOUD SYNC</p>
-        <h1>Payout Tracker</h1>
+        <p class="eyebrow">Random picker</p>
+        <h1>Random Goal</h1>
       </div>
-      <button id="signOutBtn" class="ghost danger hidden">Logout</button>
+      <button id="resetAllBtn" class="ghost small">Reset</button>
+    </header>
+
+    <section class="tabs">
+      <button id="rouletteTab" class="tab active">Goal</button>
+      <button id="orderTab" class="tab">Order</button>
+      <button id="memoTab" class="tab">Memo</button>
     </section>
 
-    <section id="loginView" class="login-card">
-      <p class="label">GOOGLE LOGIN REQUIRED</p>
-      <h2>PCとスマホでPayoutを同期</h2>
-      <p class="muted">Supabase + Googleログインで、自分のデータだけ保存・表示します。</p>
-      <button id="googleLoginBtn" class="primary">Continue with Google</button>
-      <p class="hint">※ 初回だけGoogle認証が必要です。</p>
+    <section id="rouletteMode" class="panel active-panel">
+      <div class="goal-card">
+        <button id="minusGoal" class="round">−</button>
+        <div>
+          <p class="label">Goal count</p>
+          <strong id="goalValue">3</strong>
+        </div>
+        <button id="plusGoal" class="round">＋</button>
+      </div>
+
+      <div class="input-row">
+        <input id="itemInput" placeholder="ルーレット項目 例：A" maxlength="18" />
+        <button id="addItemBtn">追加</button>
+      </div>
+
+      <div class="wheel-wrap">
+        <div class="pointer">▼</div>
+        <div id="wheel" class="wheel"><div class="wheel-center">★</div></div>
+      </div>
+
+      <button id="spinBtn" class="primary">Start</button>
+      <p id="resultText" class="result">Ready</p>
+
+      <div id="itemsList" class="list"></div>
+
+      <div class="section-title">
+        <span>履歴</span><button id="clearHistoryBtn" class="ghost tiny">Clear</button>
+      </div>
+      <div id="historyList" class="history-list"></div>
     </section>
 
-    <section id="appView" class="hidden">
-      <section class="total-card">
-        <div class="scanline"></div>
-        <p class="label">TOTAL PAYOUT</p>
-        <div id="totalAmount" class="total-amount">$0.00</div>
-        <div class="total-grid">
-          <div><span id="totalCount">0</span><p>Total Times</p></div>
-          <div><span id="firmCount">0</span><p>Prop Firms</p></div>
-          <div><span id="avgAmount">$0.00</span><p>Average</p></div>
-        </div>
-      </section>
+    <section id="orderMode" class="panel">
+      <p class="hint">Order専用の項目。ルーレットとは別管理。</p>
+      <div class="input-row">
+        <input id="orderInput" placeholder="順番項目 例：A" maxlength="18" />
+        <button id="addOrderBtn">追加</button>
+      </div>
+      <button id="shuffleBtn" class="primary">ランダムに順番を決める</button>
+      <div class="section-title"><span>項目</span></div>
+      <div id="orderItemsList" class="list"></div>
+      <div class="section-title"><span>結果</span><button id="clearOrderResultsBtn" class="ghost tiny">Clear</button></div>
+      <div id="orderList" class="list order-list"></div>
+    </section>
 
-      <section class="panel">
-        <div class="section-head">
-          <h2>Analytics</h2>
-          <span id="analyticsLabel">All data</span>
-        </div>
-        <div class="filter-grid">
-          <select id="filterFirmSelect"></select>
-          <select id="filterYearSelect"></select>
-          <select id="filterMonthSelect"></select>
-        </div>
-        <div class="analytics-grid">
-          <div class="stat"><strong id="filteredAmount">$0.00</strong><span>Filtered Total</span></div>
-          <div class="stat"><strong id="filteredCount">0</strong><span>Filtered Times</span></div>
-        </div>
-        <div class="summary-block">
-          <div class="section-head compact"><h3>Yearly</h3></div>
-          <div id="yearlyList" class="summary-list"></div>
-        </div>
-        <div class="summary-block">
-          <div class="section-head compact"><h3>Monthly</h3></div>
-          <div id="monthlyList" class="summary-list"></div>
-        </div>
-      </section>
-
-      <section class="panel">
-        <h2>Add Prop Firm</h2>
-        <div class="row">
-          <input id="firmNameInput" type="text" placeholder="例：Topstep / Apex / FTMO" />
-          <button id="addFirmBtn">Add</button>
-        </div>
-      </section>
-
-      <section class="panel">
-        <h2>Add Payout</h2>
-        <div class="stack">
-          <select id="firmSelect"></select>
-          <input id="amountInput" type="number" inputmode="decimal" placeholder="Amount USD" />
-          <input id="dateInput" type="date" />
-          <input id="memoInput" type="text" placeholder="Memo optional" />
-          <button id="addPayoutBtn" class="primary">Add Payout</button>
-        </div>
-      </section>
-
-      <section>
-        <div class="section-head">
-          <h2>Prop Firms</h2>
-          <span id="statusText"></span>
-        </div>
-        <div id="firmList" class="firm-list"></div>
-      </section>
-
-      <section class="panel">
-        <div class="section-head">
-          <h2>History</h2>
-          <div class="history-actions">
-            <button id="seeAllBtn" class="ghost">See All</button>
-            <button id="clearHistoryBtn" class="ghost">Clear</button>
-          </div>
-        </div>
-        <div id="historyList" class="history-list"></div>
-      </section>
+    <section id="memoMode" class="panel">
+      <p class="hint">ちょっとしたメモ用。自動保存。</p>
+      <textarea id="memoText" placeholder="MEMO"></textarea>
+      <p id="memoStatus" class="memo-status">Saved</p>
     </section>
   </main>
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="config.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
