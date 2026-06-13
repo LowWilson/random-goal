@@ -28,10 +28,10 @@ function render(){
   renderWheel(); renderItems(); renderHistory(); renderOrderItems(); renderOrderResults();
   $("memoText").value = state.memo || "";
 
-  if (finished) {
-    $("spinBtn").textContent = "終了！Resetして再開";
-    $("spinBtn").disabled = true;
-  } else if (autoRunning) {
+if (finished) {
+  $("spinBtn").textContent = "もう一回回す";
+  $("spinBtn").disabled = false;
+} else if (autoRunning) {
     $("spinBtn").textContent = "Stop";
     $("spinBtn").disabled = false;
   } else {
@@ -118,7 +118,13 @@ function renderOrderResults(){
 function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 
 async function autoSpin(){
-  if(finished) return;
+  if(finished){
+  state.items = state.items.map(x => ({...x, count:0}));
+  finished = false;
+  $("resultText").textContent = "Ready";
+  save();
+  render();
+}
 
   if(autoRunning){
     stopRequested = true;
@@ -172,8 +178,8 @@ function spinOnce(){
         state.history=state.history.slice(0,7);
 
         $("resultText").textContent=`${picked.name}`;
-        $("spinBtn").textContent="終了！Resetして再開"; 
-        $("spinBtn").disabled=true;
+        $("spinBtn").textContent="もう一回回す"; 
+        $("spinBtn").disabled=false;
       }
 
       spinning=false; 
