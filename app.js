@@ -1,219 +1,202 @@
-const $ = (id) => document.getElementById(id);
+const colors=["#36e7ff","#4dff9a","#7c5cff","#ffce45","#ff477e","#00b7ff","#22ffaa","#b967ff","#00ffd5"];
+const $=id=>document.getElementById(id);
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+let currentUser=null,firms=[],payouts=[],showAllHistory=false;
+let filters={firmId:"all",year:"all",month:"all"};
 
-const defaults = {
-  goal: 3,
-  items: [{name:"A",count:0},{name:"B",count:0},{name:"C",count:0}],
-  orderItems: [{name:"研究"},{name:"TOEIC"},{name:"筋トレ"}],
-  orderResults: [],
-  history: [],
-  memo: "",
-  rotation: 0
-};
+function usd(n){return "$"+Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});}
+function today(){return new Date().toISOString().slice(0,10);}
+function escapeHtml(str){return String(str).replace(/[&<>"']/g,s=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[s]));}
+function payoutYear(p){return (p.payout_date||"").slice(0,4);}
+function payoutMonth(p){return (p.payout_date||"").slice(5,7);}
+function payoutYearMonth(p){return (p.payout_date||"").slice(0,7);}
+function totalAmount(list){return list.reduce((s,p)=>s+Number(p.amount),0);}
+function getFilteredPayouts(){
+  return payouts.filter(p=>{
+    const firmOK=filters.firmId==="all"||p.firm_id===filters.firmId;
+    const yearOK=filters.year==="all"||payoutYear(p)===filters.year;
+    const monthOK=filters.month==="all"||payoutMonth(p)===filters.month;
+    return firmOK&&yearOK&&monthOK;
+  });
+}
 
-let state = { ...defaults, ...(JSON.parse(localStorage.getItem("randomGoalState") || "{}")) };
-if (!state.orderItems) state.orderItems = state.items.map(x => ({ name: x.name }));
-if (!state.orderResults) state.orderResults = [];
-if (!state.history) state.history = [];
-if (!state.memo) state.memo = "";
+async function init(){
+  $("dateInput").value=today();
+  const {data}=await sb.auth.getSession();
+  currentUser=data.session?.user||null;
+  updateAuthView();
+  if(currentUser) await loadData();
+  sb.auth.onAuthStateChange(async(_event,session)=>{
+    currentUser=session?.user||null;
+    updateAuthView();
+    if(currentUser) await loadData();
+  });
+}
 
-let spinning = false;
-let autoRunning = false;
-let finished = state.items.some(x => x.count >= state.goal);
-let stopRequested = false;
+function updateAuthView(){
+  const loggedIn=!!currentUser;
+  $("loginView").classList.toggle("hidden",loggedIn);
+  $("appView").classList.toggle("hidden",!loggedIn);
+  $("signOutBtn").classList.toggle("hidden",!loggedIn);
+}
 
-function save(){ localStorage.setItem("randomGoalState", JSON.stringify(state)); }
+async function signIn(){
+  await sb.auth.signInWithOAuth({provider:"google",options:{redirectTo:window.location.origin+window.location.pathname}});
+}
+async function signOut(){await sb.auth.signOut();}
+
+async function loadData(){
+  const {data:firmData,error:firmErr}=await sb.from("prop_firms").select("*").order("created_at",{ascending:true});
+  if(firmErr){alert("firm読み込みエラー: "+firmErr.message);return;}
+  const {data:payoutData,error:payoutErr}=await sb.from("payouts").select("*").order("created_at",{ascending:false});
+  if(payoutErr){alert("payout読み込みエラー: "+payoutErr.message);return;}
+  firms=firmData||[];
+  payouts=payoutData||[];
+  render();
+}
+
+function firmTotals(firmId){
+  const list=payouts.filter(p=>p.firm_id===firmId);
+  return {count:list.length,amount:totalAmount(list)};
+}
+
+function renderFilters(){
+  const firmSelect=$("filterFirmSelect"),yearSelect=$("filterYearSelect"),monthSelect=$("filterMonthSelect");
+  firmSelect.innerHTML='<option value="all">All Firms</option>';
+  firms.forEach(f=>{const opt=document.createElement("option");opt.value=f.id;opt.textContent=f.name;firmSelect.appendChild(opt);});
+  firmSelect.value=filters.firmId;
+  const years=[...new Set(payouts.map(payoutYear).filter(Boolean))].sort((a,b)=>b.localeCompare(a));
+  yearSelect.innerHTML='<option value="all">All Years</option>';
+  years.forEach(y=>{const opt=document.createElement("option");opt.value=y;opt.textContent=y;yearSelect.appendChild(opt);});
+  if(!years.includes(filters.year)&&filters.year!=="all") filters.year="all";
+  yearSelect.value=filters.year;
+  monthSelect.innerHTML='<option value="all">All Months</option>';
+  for(let i=1;i<=12;i++){const mm=String(i).padStart(2,"0");const opt=document.createElement("option");opt.value=mm;opt.textContent=mm;monthSelect.appendChild(opt);}
+  monthSelect.value=filters.month;
+}
+
+function renderAnalytics(){
+  const filtered=getFilteredPayouts(),amount=totalAmount(filtered);
+  $("filteredAmount").textContent=usd(amount);
+  $("filteredCount").textContent=filtered.length;
+  const firmName=filters.firmId==="all"?"All firms":(firms.find(f=>f.id===filters.firmId)?.name||"Selected firm");
+  const yearText=filters.year==="all"?"All years":filters.year;
+  const monthText=filters.month==="all"?"All months":filters.month;
+  $("analyticsLabel").textContent=`${firmName} / ${yearText} / ${monthText}`;
+  renderYearly(filtered);
+  renderMonthly(filtered);
+}
+
+function renderYearly(list){
+  const map=new Map();
+  list.forEach(p=>{const y=payoutYear(p)||"Unknown";if(!map.has(y))map.set(y,[]);map.get(y).push(p);});
+  const rows=[...map.entries()].sort((a,b)=>b[0].localeCompare(a[0]));
+  $("yearlyList").innerHTML=rows.length?"":'<div class="empty">年別データなし</div>';
+  rows.forEach(([year,arr])=>{
+    const div=document.createElement("div");div.className="summary-item";
+    div.innerHTML=`<div><div class="summary-title">${year}</div><div class="summary-sub">${arr.length} payouts</div></div><div class="summary-amount">${usd(totalAmount(arr))}</div>`;
+    $("yearlyList").appendChild(div);
+  });
+}
+
+function renderMonthly(list){
+  const map=new Map();
+  list.forEach(p=>{const ym=payoutYearMonth(p)||"Unknown";if(!map.has(ym))map.set(ym,[]);map.get(ym).push(p);});
+  const rows=[...map.entries()].sort((a,b)=>b[0].localeCompare(a[0]));
+  $("monthlyList").innerHTML=rows.length?"":'<div class="empty">月別データなし</div>';
+  rows.forEach(([ym,arr])=>{
+    const div=document.createElement("div");div.className="summary-item";
+    div.innerHTML=`<div><div class="summary-title">${ym}</div><div class="summary-sub">${arr.length} payouts</div></div><div class="summary-amount">${usd(totalAmount(arr))}</div>`;
+    $("monthlyList").appendChild(div);
+  });
+}
 
 function render(){
-  $("goalValue").textContent = state.goal;
-  renderWheel(); renderItems(); renderHistory(); renderOrderItems(); renderOrderResults();
-  $("memoText").value = state.memo || "";
+  const totalCount=payouts.length,allAmount=totalAmount(payouts);
+  $("totalAmount").textContent=usd(allAmount);
+  $("totalCount").textContent=totalCount;
+  $("firmCount").textContent=firms.length;
+  $("avgAmount").textContent=usd(totalCount?allAmount/totalCount:0);
+  $("statusText").textContent=`${firms.length} firms / ${totalCount} payouts`;
+  renderFilters();renderAnalytics();
 
-  if (finished) {
-    $("spinBtn").textContent = "終了！Resetして再開";
-    $("spinBtn").disabled = true;
-  } else if (autoRunning) {
-    $("spinBtn").textContent = "Stop";
-    $("spinBtn").disabled = false;
-  } else {
-    $("spinBtn").textContent = "Start";
-    $("spinBtn").disabled = false;
-  }
-}
+  $("firmSelect").innerHTML="";
+  firms.forEach(f=>{const opt=document.createElement("option");opt.value=f.id;opt.textContent=f.name;$("firmSelect").appendChild(opt);});
 
-function renderWheel(){
-  const wheel = $("wheel");
-  wheel.querySelectorAll(".wheel-label").forEach(el => el.remove());
-  wheel.style.transform = `rotate(${state.rotation}deg)`;
-  const n = state.items.length || 1;
-  state.items.forEach((item,i)=>{
-    const angle=(360/n)*i;
-    const label=document.createElement("div");
-    label.className="wheel-label"; label.textContent=item.name;
-    label.style.transform=`rotate(${angle}deg) translate(42px, -8px) rotate(90deg)`;
-    wheel.appendChild(label);
+  $("firmList").innerHTML=firms.length?"":'<div class="empty">Prop firmを追加してね</div>';
+  firms.forEach((firm,index)=>{
+    const t=firmTotals(firm.id);
+    const card=document.createElement("div");card.className="firm-card";
+    card.style.setProperty("--firm-color",firm.color||colors[index%colors.length]);
+    card.innerHTML=`<div class="firm-top"><div class="firm-name">${escapeHtml(firm.name)}</div><button class="ghost danger tiny-btn" data-delete-firm="${firm.id}">Delete</button></div><div class="firm-stats"><div class="stat"><strong>${t.count}</strong><span>Payout Times</span></div><div class="stat"><strong>${usd(t.amount)}</strong><span>Total USD</span></div></div>`;
+    $("firmList").appendChild(card);
+  });
+
+  $("seeAllBtn").textContent=showAllHistory?"Show Less":"See All";
+  const filteredForHistory=getFilteredPayouts();
+  const displayPayouts=showAllHistory?filteredForHistory:filteredForHistory.slice(0,20);
+  $("historyList").innerHTML=displayPayouts.length?"":'<div class="empty">まだpayout履歴なし</div>';
+  displayPayouts.forEach(p=>{
+    const firm=firms.find(f=>f.id===p.firm_id);
+    const div=document.createElement("div");div.className="history-item";
+    div.innerHTML=`<div><div class="history-main">${escapeHtml(firm?.name||p.firm_name||"Deleted Firm")}</div><div class="history-sub">${p.payout_date||""}${p.memo?" ・ "+escapeHtml(p.memo):""}</div></div><div><div class="amount">${usd(p.amount)}</div><button class="ghost danger tiny-btn" data-delete-payout="${p.id}">Delete</button></div>`;
+    $("historyList").appendChild(div);
   });
 }
 
-function renderItems(){
-  const list=$("itemsList"); list.innerHTML="";
-  state.items.forEach((item,i)=>{
-    const row=document.createElement("div");
-    row.className="item-card"+(item.count>=state.goal?" done":"");
-    row.innerHTML=`<strong>${escapeHtml(item.name)}</strong><span class="count">${item.count}/${state.goal}</span><button class="delete" data-i="${i}">削除</button>`;
-    list.appendChild(row);
-  });
-  document.querySelectorAll("#itemsList .delete").forEach(btn=>{
-    btn.onclick=()=>{
-      if(autoRunning) return;
-      if(state.items.length<=2) return alert("項目は最低2つ必要。押し切りすぎ注意。");
-      state.items.splice(Number(btn.dataset.i),1);
-      finished = state.items.some(x => x.count >= state.goal);
-      save(); render();
-    };
-  });
+async function addFirm(){
+  const name=$("firmNameInput").value.trim();
+  if(!name||!currentUser)return;
+  const color=colors[firms.length%colors.length];
+  const {error}=await sb.from("prop_firms").insert({name,color,user_id:currentUser.id});
+  if(error){alert(error.message);return;}
+  $("firmNameInput").value="";await loadData();
 }
 
-function renderHistory(){
-  const box=$("historyList");
-  if(!state.history.length){ box.innerHTML='<div class="empty">まだ履歴なし</div>'; return; }
-  box.innerHTML=state.history.slice(0,7).map(x=>`<div class="history-pill">${escapeHtml(x)}</div>`).join("");
+async function addPayout(){
+  const firmId=$("firmSelect").value,firm=firms.find(f=>f.id===firmId),amount=Number($("amountInput").value);
+  if(!firm||!amount||amount<=0||!currentUser)return;
+  const {error}=await sb.from("payouts").insert({user_id:currentUser.id,firm_id:firmId,firm_name:firm.name,amount,payout_date:$("dateInput").value||today(),memo:$("memoInput").value.trim()});
+  if(error){alert(error.message);return;}
+  $("amountInput").value="";$("memoInput").value="";$("dateInput").value=today();await loadData();
 }
 
-function renderOrderItems(){
-  const list=$("orderItemsList"); list.innerHTML="";
-  state.orderItems.forEach((item,i)=>{
-    const row=document.createElement("div");
-    row.className="item-card simple";
-    row.innerHTML=`<strong>${escapeHtml(item.name)}</strong><button class="delete" data-i="${i}">削除</button>`;
-    list.appendChild(row);
-  });
-  document.querySelectorAll("#orderItemsList .delete").forEach(btn=>{
-    btn.onclick=()=>{
-      // 入力項目だけ削除。結果リストには影響させない。
-      state.orderItems.splice(Number(btn.dataset.i),1);
-      save(); renderOrderItems();
-    };
-  });
+async function deleteFirm(id){
+  if(!confirm("このProp firmを消す？関連payoutも消えるよ。"))return;
+  let {error}=await sb.from("payouts").delete().eq("firm_id",id);
+  if(error){alert(error.message);return;}
+  ({error}=await sb.from("prop_firms").delete().eq("id",id));
+  if(error){alert(error.message);return;}
+  await loadData();
 }
 
-function renderOrderResults(){
-  const list=$("orderList");
-  if(!state.orderResults.length){ list.innerHTML='<div class="empty">まだ結果なし</div>'; return; }
-  list.innerHTML="";
-  state.orderResults.forEach((name,i)=>{
-    const row=document.createElement("div");
-    row.className="item-card simple";
-    row.innerHTML=`<strong><span class="order-rank">${i+1}</span>${escapeHtml(name)}</strong><button class="delete" data-i="${i}">削除</button>`;
-    list.appendChild(row);
-  });
-  document.querySelectorAll("#orderList .delete").forEach(btn=>{
-    btn.onclick=()=>{
-      // 結果だけ削除。Order項目にもルーレットにも影響させない。
-      state.orderResults.splice(Number(btn.dataset.i),1);
-      save(); renderOrderResults();
-    };
-  });
+async function deletePayout(id){
+  const {error}=await sb.from("payouts").delete().eq("id",id);
+  if(error){alert(error.message);return;}
+  await loadData();
 }
 
-function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
-
-async function autoSpin(){
-  if(finished) return;
-
-  if(autoRunning){
-    stopRequested = true;
-    $("spinBtn").textContent = "停止中...";
-    return;
-  }
-
-  if(state.items.length<2) return alert("項目を2つ以上入れてね。ルーレットが虚無になる。");
-
-  autoRunning = true;
-  stopRequested = false;
-  $("spinBtn").disabled = false;
-  $("spinBtn").textContent = "止める";
-
-  while(!finished && !stopRequested){
-    await spinOnce();
-    if(!finished && !stopRequested) await sleep(180);
-  }
-
-  autoRunning = false;
-
-  if(!finished){
-    $("spinBtn").textContent = "Start";
-    $("spinBtn").disabled = false;
-    $("resultText").textContent = "Stopped";
-  }
-
-  stopRequested = false;
+async function clearHistory(){
+  if(!confirm("現在ログイン中の全payout履歴を消す？"))return;
+  const {error}=await sb.from("payouts").delete().eq("user_id",currentUser.id);
+  if(error){alert(error.message);return;}
+  await loadData();
 }
 
-function spinOnce(){
-  return new Promise(resolve=>{
-    if(spinning || finished) return resolve();
-    spinning=true; $("resultText").textContent="Spinning...";
-    const winner=Math.floor(Math.random()*state.items.length);
-    const anglePerItem=360/state.items.length;
-    const targetAngle=360-winner*anglePerItem-anglePerItem/2;
-    const currentMod=((state.rotation%360)+360)%360;
-    const delta=720+((targetAngle-currentMod+360)%360);
-    state.rotation+=delta; renderWheel();
-    setTimeout(()=>{
-      state.items[winner].count+=1;
-      const picked=state.items[winner];
+document.addEventListener("click",e=>{
+  const firmId=e.target.dataset.deleteFirm,payoutId=e.target.dataset.deletePayout;
+  if(firmId)deleteFirm(firmId);
+  if(payoutId)deletePayout(payoutId);
+});
 
-      $("resultText").textContent=`${picked.name}！`;
-      if(navigator.vibrate) navigator.vibrate(25);
-
-      if(picked.count>=state.goal){
-        finished=true;
-        state.history.unshift(picked.name);
-        state.history=state.history.slice(0,7);
-
-        $("resultText").textContent=`${picked.name}`;
-        $("spinBtn").textContent="終了！Resetして再開"; 
-        $("spinBtn").disabled=true;
-      }
-
-      spinning=false; 
-      save(); 
-      renderItems(); 
-      renderHistory(); 
-      resolve();
-    },1080);
-  });
-}
-
-function shuffleOrder(){
-  if(state.orderItems.length<2) return alert("Order項目を2つ以上入れてね。");
-  const arr=[...state.orderItems.map(x=>x.name)];
-  for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; }
-  state.orderResults = arr;
-  save(); renderOrderResults();
-}
-
-function resetAll(){
-  if(autoRunning) return;
-  state.items=state.items.map(x=>({...x,count:0}));
-  finished=false; $("resultText").textContent="Ready"; save(); render();
-}
-function addItem(){ const input=$("itemInput"); const name=input.value.trim(); if(!name) return; state.items.push({name,count:0}); input.value=""; finished=false; save(); render(); }
-function addOrderItem(){ const input=$("orderInput"); const name=input.value.trim(); if(!name) return; state.orderItems.push({name}); input.value=""; save(); renderOrderItems(); }
-function clearHistory(){ state.history=[]; save(); renderHistory(); }
-function clearOrderResults(){ state.orderResults=[]; save(); renderOrderResults(); }
-function escapeHtml(str){ return String(str).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
-
-$("spinBtn").onclick=autoSpin; $("shuffleBtn").onclick=shuffleOrder; $("resetAllBtn").onclick=resetAll;
-$("addItemBtn").onclick=addItem; $("addOrderBtn").onclick=addOrderItem; $("clearHistoryBtn").onclick=clearHistory; $("clearOrderResultsBtn").onclick=clearOrderResults;
-$("itemInput").addEventListener("keydown",e=>{if(e.key==="Enter")addItem();});
-$("orderInput").addEventListener("keydown",e=>{if(e.key==="Enter")addOrderItem();});
-$("memoText").addEventListener("input",e=>{ state.memo=e.target.value; save(); $("memoStatus").textContent="Saved"; });
-$("minusGoal").onclick=()=>{ if(state.goal>1 && !autoRunning){ state.goal--; finished=state.items.some(x=>x.count>=state.goal); save(); render(); } };
-$("plusGoal").onclick=()=>{ if(!autoRunning){ state.goal++; finished=state.items.some(x=>x.count>=state.goal); save(); render(); } };
-$("rouletteTab").onclick=()=>switchTab("roulette"); $("orderTab").onclick=()=>switchTab("order"); $("memoTab").onclick=()=>switchTab("memo");
-function switchTab(mode){
-  $("rouletteTab").classList.toggle("active",mode==="roulette"); $("orderTab").classList.toggle("active",mode==="order"); $("memoTab").classList.toggle("active",mode==="memo");
-  $("rouletteMode").classList.toggle("active-panel",mode==="roulette"); $("orderMode").classList.toggle("active-panel",mode==="order"); $("memoMode").classList.toggle("active-panel",mode==="memo");
-}
-render();
+$("googleLoginBtn").addEventListener("click",signIn);
+$("signOutBtn").addEventListener("click",signOut);
+$("addFirmBtn").addEventListener("click",addFirm);
+$("addPayoutBtn").addEventListener("click",addPayout);
+$("clearHistoryBtn").addEventListener("click",clearHistory);
+$("firmNameInput").addEventListener("keydown",e=>{if(e.key==="Enter")addFirm();});
+$("seeAllBtn").addEventListener("click",()=>{showAllHistory=!showAllHistory;render();});
+$("filterFirmSelect").addEventListener("change",e=>{filters.firmId=e.target.value;showAllHistory=false;render();});
+$("filterYearSelect").addEventListener("change",e=>{filters.year=e.target.value;showAllHistory=false;render();});
+$("filterMonthSelect").addEventListener("change",e=>{filters.month=e.target.value;showAllHistory=false;render();});
+init();
