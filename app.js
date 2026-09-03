@@ -1,4 +1,5 @@
 const $ = (id) => document.getElementById(id);
+const storageKey = document.body.dataset.storageKey || "randomGoalState";
 
 const defaults = {
   goal: 3,
@@ -10,7 +11,9 @@ const defaults = {
   rotation: 0
 };
 
-let state = { ...defaults, ...(JSON.parse(localStorage.getItem("randomGoalState") || "{}")) };
+let state;
+try { state = { ...defaults, ...(JSON.parse(localStorage.getItem(storageKey) || "{}")) }; }
+catch { state = JSON.parse(JSON.stringify(defaults)); }
 if (!state.orderItems) state.orderItems = state.items.map(x => ({ name: x.name }));
 if (!state.orderResults) state.orderResults = [];
 if (!state.history) state.history = [];
@@ -21,7 +24,7 @@ let autoRunning = false;
 let finished = state.items.some(x => x.count >= state.goal);
 let stopRequested = false;
 
-function save(){ localStorage.setItem("randomGoalState", JSON.stringify(state)); }
+function save(){ localStorage.setItem(storageKey, JSON.stringify(state)); }
 
 function render(){
   $("goalValue").textContent = state.goal;
@@ -46,10 +49,11 @@ function renderWheel(){
   wheel.style.transform = `rotate(${state.rotation}deg)`;
   const n = state.items.length || 1;
   state.items.forEach((item,i)=>{
-    const angle=(360/n)*i;
+    const angle=(360/n)*(i+.5);
     const label=document.createElement("div");
     label.className="wheel-label"; label.textContent=item.name;
-    label.style.transform=`rotate(${angle}deg) translate(42px, -8px) rotate(90deg)`;
+    const radius = n > 8 ? 100 : 92;
+    label.style.transform=`rotate(${angle}deg) translate(0, -${radius}px) rotate(${-angle}deg) translate(-50%, -50%)`;
     wheel.appendChild(label);
   });
 }

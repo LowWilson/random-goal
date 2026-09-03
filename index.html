@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="style.css" />
   <title>Random Goal</title>
 </head>
-<body>
+<body data-storage-key="randomGoalState" data-page="1">
   <main class="app">
     <header class="hero">
       <div>
@@ -21,6 +21,11 @@
       </div>
       <button id="resetAllBtn" class="ghost small">Reset</button>
     </header>
+
+    <nav class="page-switch" aria-label="ルーレット切り替え">
+      <a class="page-link active" href="index.html" aria-current="page">Roulette 1</a>
+      <a class="page-link" href="roulette2.html">Roulette 2</a>
+    </nav>
 
     <section class="tabs">
       <button id="rouletteTab" class="tab active">Goal</button>
