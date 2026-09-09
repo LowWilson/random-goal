@@ -121,14 +121,21 @@ function renderOrderResults(){
 
 function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 
-async function autoSpin(){
-  if(finished){
-  state.items = state.items.map(x => ({...x, count:0}));
+function resetRound(){
+  state.items = state.items.map(item => ({ ...item, count: 0 }));
   finished = false;
+  stopRequested = false;
   $("resultText").textContent = "Ready";
   save();
   render();
 }
+
+async function autoSpin(){
+  if(finished){
+    // 前回の続きにはせず、全項目を0に戻してから新しいラウンドを始める。
+    resetRound();
+    await sleep(160);
+  }
 
   if(autoRunning){
     stopRequested = true;
@@ -205,8 +212,7 @@ function shuffleOrder(){
 
 function resetAll(){
   if(autoRunning) return;
-  state.items=state.items.map(x=>({...x,count:0}));
-  finished=false; $("resultText").textContent="Ready"; save(); render();
+  resetRound();
 }
 function addItem(){ const input=$("itemInput"); const name=input.value.trim(); if(!name) return; state.items.push({name,count:0}); input.value=""; finished=false; save(); render(); }
 function addOrderItem(){ const input=$("orderInput"); const name=input.value.trim(); if(!name) return; state.orderItems.push({name}); input.value=""; save(); renderOrderItems(); }
