@@ -16,3 +16,11 @@ body[data-page="2"] .tab.active{background:linear-gradient(135deg,rgba(0,201,167
 .history-pill{max-width:180px;min-height:48px;height:auto;padding-top:8px;padding-bottom:8px;overflow-wrap:anywhere;text-align:center}
 body[data-page="2"] .history-pill{background:rgba(0,201,167,.16);border-color:rgba(0,201,167,.35)}
 @media(max-width:360px){.app{padding-left:12px;padding-right:12px}.wheel-wrap{height:284px}.wheel{width:248px;height:248px}.input-row{grid-template-columns:minmax(0,1fr) 70px}.item-card{gap:7px;padding:12px 10px}}
+
+/* Dropdown navigation for the three independent roulettes. */
+.page-switch{grid-template-columns:1fr;padding:12px;gap:8px}
+.page-switch label{font-size:13px;color:var(--muted)}
+.page-switch select{width:100%;min-height:44px;padding:10px 12px;font:inherit;font-weight:700;color:var(--text);background:#191123;border:1px solid var(--accent);border-radius:12px;color-scheme:dark}
+.page-switch select:focus-visible{outline:2px solid var(--accent2);outline-offset:3px}
+body[data-page="3"]{--accent:#ff9b45;--accent2:#ec5c94}
+body[data-page="3"] .tab.active{background:linear-gradient(135deg,var(--accent),var(--accent2))}

@@ -12,7 +12,14 @@
 <body data-storage-key="randomGoalState2" data-page="2">
   <main class="app">
     <header class="hero"><div><p class="eyebrow">Second random picker</p><h1>Random Goal 2</h1></div><button id="resetAllBtn" class="ghost small">Reset</button></header>
-    <nav class="page-switch" aria-label="ルーレット切り替え"><a class="page-link" href="index.html">Roulette 1</a><a class="page-link active" href="roulette2.html" aria-current="page">Roulette 2</a></nav>
+    <nav class="page-switch" aria-label="ルーレット切り替え">
+      <label for="rouletteSelect">ルーレットを選択</label>
+      <select id="rouletteSelect">
+        <option value="index.html">Roulette 1</option>
+        <option value="roulette2.html" selected>Roulette 2</option>
+        <option value="roulette3.html">Roulette 3</option>
+      </select>
+    </nav>
     <section class="tabs"><button id="rouletteTab" class="tab active">Goal</button><button id="orderTab" class="tab">Order</button><button id="memoTab" class="tab">Memo</button></section>
     <section id="rouletteMode" class="panel active-panel">
       <div class="goal-card"><button id="minusGoal" class="round">−</button><div><p class="label">Goal count</p><strong id="goalValue">3</strong></div><button id="plusGoal" class="round">＋</button></div>

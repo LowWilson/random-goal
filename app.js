@@ -131,16 +131,15 @@ function resetRound(){
 }
 
 async function autoSpin(){
-  if(finished){
-    // 前回の続きにはせず、全項目を0に戻してから新しいラウンドを始める。
-    resetRound();
-    await sleep(160);
-  }
-
   if(autoRunning){
     stopRequested = true;
     $("spinBtn").textContent = "停止中...";
     return;
+  }
+
+  if(finished){
+    // 前回の続きにはせず、全項目を0に戻してから新しいラウンドを始める。
+    resetRound();
   }
 
   if(state.items.length<2) return alert("項目を2つ以上入れてね。ルーレットが虚無になる。");
@@ -214,12 +213,24 @@ function resetAll(){
   if(autoRunning) return;
   resetRound();
 }
-function addItem(){ const input=$("itemInput"); const name=input.value.trim(); if(!name) return; state.items.push({name,count:0}); input.value=""; finished=false; save(); render(); }
+function addItem(){
+  if(autoRunning || spinning) return;
+  const input = $("itemInput");
+  const name = input.value.trim();
+  if(!name) return;
+  state.items.push({name, count:0});
+  input.value = "";
+  resetRound();
+}
 function addOrderItem(){ const input=$("orderInput"); const name=input.value.trim(); if(!name) return; state.orderItems.push({name}); input.value=""; save(); renderOrderItems(); }
 function clearHistory(){ state.history=[]; save(); renderHistory(); }
 function clearOrderResults(){ state.orderResults=[]; save(); renderOrderResults(); }
 function escapeHtml(str){ return String(str).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
 
+$("rouletteSelect").addEventListener("change", e => {
+  const pages = ["index.html", "roulette2.html", "roulette3.html"];
+  if(pages.includes(e.target.value)) window.location.href = e.target.value;
+});
 $("spinBtn").onclick=autoSpin; $("shuffleBtn").onclick=shuffleOrder; $("resetAllBtn").onclick=resetAll;
 $("addItemBtn").onclick=addItem; $("addOrderBtn").onclick=addOrderItem; $("clearHistoryBtn").onclick=clearHistory; $("clearOrderResultsBtn").onclick=clearOrderResults;
 $("itemInput").addEventListener("keydown",e=>{if(e.key==="Enter")addItem();});
